@@ -1,0 +1,25 @@
+{
+    "recommendations": [
+        "hashicorp.terraform",
+        "ms-vscode.azure-account",
+        "ms-azuretools.vscode-azureterraform",
+        "ms-azuretools.vscode-azureresourcegroups",
+        "ms-azuretools.vscode-azurestorage",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode.makefile-tools",
+        "github.vscode-github-actions",
+        "ms-vscode.powershell",
+        "ms-azure-devops.azure-pipelines",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.vscode-typescript-next",
+        "gruntfuggly.todo-tree",
+        "oderwat.indent-rainbow",
+        "christian-kohler.path-intellisense",
+        "formulahendry.auto-rename-tag",
+        "bradlc.vscode-tailwindcss"
+    ],
+    "unwantedRecommendations": [
+        "ms-vscode.vscode-typescript"
+    ]
+}

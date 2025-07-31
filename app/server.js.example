@@ -1,0 +1,37 @@
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 80;
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Hello from Azure App Service with Docker!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
+// Health check endpoint for Azure App Service
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API endpoint example
+app.get('/api/info', (req, res) => {
+  res.json({
+    hostname: require('os').hostname(),
+    platform: require('os').platform(),
+    arch: require('os').arch(),
+    nodeVersion: process.version,
+    uptime: process.uptime()
+  });
+});
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});

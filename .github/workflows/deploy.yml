@@ -1,0 +1,128 @@
+name: Deploy Docker App to Azure Government
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  TF_VERSION: '1.5.0'
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_ENVIRONMENT: "usgovernment"
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Terraform Init
+      run: terraform init
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    - name: Terraform Format
+      run: terraform fmt -check
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      run: |
+        terraform plan -input=false -out=tfplan \
+          -var="container_registry_name=${{ secrets.CONTAINER_REGISTRY_NAME }}" \
+          -var="app_service_name=${{ secrets.APP_SERVICE_NAME }}" \
+          -var="resource_group_name=${{ secrets.RESOURCE_GROUP_NAME }}" \
+          -var="location=${{ secrets.AZURE_LOCATION }}"
+
+    # On push to main, build or change infrastructure according to Terraform configuration files
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve tfplan
+
+    # Get Terraform outputs for use in Docker build
+    - name: Get Terraform Outputs
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      id: terraform_outputs
+      run: |
+        echo "acr_name=$(terraform output -raw container_registry_name)" >> $GITHUB_OUTPUT
+        echo "acr_login_server=$(terraform output -raw container_registry_login_server)" >> $GITHUB_OUTPUT
+        echo "docker_image_full_name=$(terraform output -raw docker_image_full_name)" >> $GITHUB_OUTPUT
+        echo "app_service_url=$(terraform output -raw app_service_url)" >> $GITHUB_OUTPUT
+
+    # Configure Azure CLI for Azure Government
+    - name: Configure Azure CLI for Azure Government
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        az cloud set --name AzureUSGovernment
+        az cloud show --query name
+
+    # Login to Azure Government
+    - name: Azure Government Login
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        environment: 'AzureUSGovernment'
+
+    # Login to Azure Container Registry
+    - name: Login to ACR
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: az acr login --name ${{ steps.terraform_outputs.outputs.acr_name }}
+
+    # Build and push Docker image
+    - name: Build and Push Docker Image
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        # Check if Dockerfile exists
+        if [ -f "Dockerfile" ]; then
+          echo "Using Dockerfile from repository root"
+          DOCKERFILE_PATH="."
+        elif [ -f "Dockerfile.example" ]; then
+          echo "Using Dockerfile.example (copying to Dockerfile)"
+          cp Dockerfile.example Dockerfile
+          DOCKERFILE_PATH="."
+        else
+          echo "No Dockerfile found. Please add a Dockerfile to your repository."
+          exit 1
+        fi
+        
+        # Build and push the image
+        docker build -t ${{ steps.terraform_outputs.outputs.docker_image_full_name }} $DOCKERFILE_PATH
+        docker push ${{ steps.terraform_outputs.outputs.docker_image_full_name }}
+
+    # Restart App Service to pull the new image
+    - name: Restart App Service
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        az webapp restart --name ${{ secrets.APP_SERVICE_NAME }} --resource-group ${{ secrets.RESOURCE_GROUP_NAME }}
+
+    # Output deployment information
+    - name: Deployment Summary
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📱 Application URL: ${{ steps.terraform_outputs.outputs.app_service_url }}"
+        echo "🐳 Docker Image: ${{ steps.terraform_outputs.outputs.docker_image_full_name }}"
+        echo "📊 Container Registry: ${{ steps.terraform_outputs.outputs.acr_login_server }}"

@@ -1,0 +1,30 @@
+{
+    "folders": [
+        {
+            "name": "Azure Government Terraform",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.defaultProfile.osx": "zsh",
+        "terminal.integrated.defaultProfile.windows": "PowerShell",
+        "workbench.startupEditor": "readme",
+        "files.defaultLanguage": "terraform"
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": []
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": []
+    },
+    "extensions": {
+        "recommendations": [
+            "hashicorp.terraform",
+            "ms-vscode.azure-account",
+            "ms-azuretools.vscode-azureterraform"
+        ]
+    }
+}

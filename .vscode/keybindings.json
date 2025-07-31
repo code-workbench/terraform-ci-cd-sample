@@ -1,0 +1,74 @@
+[
+    {
+        "key": "ctrl+shift+t ctrl+shift+p",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Plan",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+t ctrl+shift+a",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Apply",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+t ctrl+shift+v",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Validate",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+t ctrl+shift+f",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Format",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+t ctrl+shift+i",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Initialize",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+t ctrl+shift+o",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Terraform: Show Outputs",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+a ctrl+shift+g",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Azure Gov: Check Configuration",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+a ctrl+shift+s",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Azure Gov: Setup Government Cloud",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+a ctrl+shift+d",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Azure Gov: Full Deployment",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+s ctrl+shift+c",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Azure Gov: Security Check",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+d ctrl+shift+w",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Deploy: Complete Workflow",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+h",
+        "command": "workbench.action.tasks.runTask",
+        "args": "Azure Gov: Help",
+        "when": "editorTextFocus"
+    }
+]

@@ -1,0 +1,399 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Azure Gov: Help",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "help"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Show available Azure Government deployment commands"
+        },
+        {
+            "label": "Azure Gov: Setup Government Cloud",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "setup-gov"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "detail": "Configure Azure CLI for Azure Government cloud",
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "Azure Gov: Check Configuration",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "check-gov"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Verify Azure CLI is configured for Azure Government"
+        },
+        {
+            "label": "Terraform: Initialize",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "init"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "detail": "Initialize Terraform with Azure Government backend",
+            "dependsOn": "Azure Gov: Check Configuration"
+        },
+        {
+            "label": "Terraform: Validate",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "validate"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                {
+                    "owner": "terraform",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^Error: (.*)$",
+                        "message": 1
+                    }
+                }
+            ],
+            "detail": "Validate Terraform configuration for Azure Government"
+        },
+        {
+            "label": "Terraform: Format",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "fmt"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Format all Terraform files recursively"
+        },
+        {
+            "label": "Terraform: Plan",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "plan"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "terraform",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^Error: (.*)$",
+                        "message": 1
+                    }
+                }
+            ],
+            "detail": "Create Terraform execution plan for Azure Government",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Azure Gov: Check Configuration",
+                "Terraform: Validate"
+            ]
+        },
+        {
+            "label": "Terraform: Apply",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "apply"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "terraform",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^Error: (.*)$",
+                        "message": 1
+                    }
+                }
+            ],
+            "detail": "Apply Terraform configuration to Azure Government",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Azure Gov: Check Configuration",
+                "Terraform: Validate"
+            ]
+        },
+        {
+            "label": "Azure Gov: Full Deployment",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "deploy-gov"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "terraform",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^Error: (.*)$",
+                        "message": 1
+                    }
+                }
+            ],
+            "detail": "Complete Azure Government deployment with all checks",
+            "icon": {
+                "id": "cloud-upload",
+                "color": "terminal.ansiBlue"
+            }
+        },
+        {
+            "label": "Terraform: Show Outputs",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "outputs"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Display Terraform output values"
+        },
+        {
+            "label": "Azure Gov: Security Check",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "security-check"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run Azure Government compliance validation",
+            "icon": {
+                "id": "shield",
+                "color": "terminal.ansiGreen"
+            }
+        },
+        {
+            "label": "Terraform: Destroy Infrastructure",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "destroy"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "terraform",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^Error: (.*)$",
+                        "message": 1
+                    }
+                }
+            ],
+            "detail": "⚠️ DANGER: Destroy all Azure Government infrastructure",
+            "icon": {
+                "id": "trash",
+                "color": "terminal.ansiRed"
+            },
+            "dependsOn": "Azure Gov: Check Configuration"
+        },
+        {
+            "label": "Terraform: Clean",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Clean Terraform temporary files and state"
+        },
+        {
+            "label": "Setup: Create terraform.tfvars",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "terraform.tfvars.example",
+                "terraform.tfvars"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Copy terraform.tfvars.example to terraform.tfvars for customization"
+        },
+        {
+            "label": "Validate: Check terraform.tfvars exists",
+            "type": "shell",
+            "command": "test",
+            "args": [
+                "-f",
+                "terraform.tfvars"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Check if terraform.tfvars file exists before deployment"
+        },
+        {
+            "label": "Deploy: Complete Workflow",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Azure Gov: Check Configuration",
+                "Validate: Check terraform.tfvars exists",
+                "Terraform: Format",
+                "Terraform: Validate",
+                "Azure Gov: Security Check",
+                "Terraform: Plan",
+                "Terraform: Apply",
+                "Terraform: Show Outputs"
+            ],
+            "group": "build",
+            "detail": "Complete deployment workflow with all validation steps",
+            "icon": {
+                "id": "rocket",
+                "color": "terminal.ansiBlue"
+            }
+        }
+    ]
+}

@@ -1,0 +1,108 @@
+name: Deploy Docker App to Azure Government Dev Environment
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  TF_VERSION: '1.5.0'
+
+jobs:
+  deploy-to-dev:
+    name: 'Deploy to Dev Environment'
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # Install the latest version of Terraform CLI
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+
+    # Configure Azure CLI for Azure Government
+    - name: Configure Azure CLI for Azure Government
+      run: |
+        az cloud set --name AzureUSGovernment
+        az cloud show --query name
+
+    # Login to Azure Government using the credentials
+    - name: Azure Government Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        environment: 'AzureUSGovernment'
+
+    # Extract credentials for Terraform environment variables
+    - name: Set Terraform Environment Variables
+      run: |
+        echo "ARM_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientId)" >> $GITHUB_ENV
+        echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientSecret)" >> $GITHUB_ENV
+        echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .subscriptionId)" >> $GITHUB_ENV
+        echo "ARM_TENANT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .tenantId)" >> $GITHUB_ENV
+        echo "ARM_ENVIRONMENT=usgovernment" >> $GITHUB_ENV
+
+    # Make deploy script executable
+    - name: Make deploy script executable
+      run: chmod +x ./scripts/deploy-docker-app.sh
+
+    # Create terraform.tfvars for dev environment
+    - name: Create terraform.tfvars for dev environment
+      run: |
+        cd infra
+        cat > terraform.tfvars << EOF
+        location = "${{ secrets.AZURE_LOCATION }}"
+        environment = "dev"
+        EOF
+
+    # Configure Terraform backend for remote state
+    - name: Configure Terraform Backend
+      run: |
+        cd infra
+        terraform init \
+          -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER_NAME }}" \
+          -backend-config="key=dev/terraform.tfstate"
+
+    # Deploy infrastructure using the deploy script
+    - name: Deploy Infrastructure to Dev
+      run: ./scripts/deploy-docker-app.sh deploy dev
+
+    # Get Terraform outputs for subsequent steps
+    - name: Get Terraform Outputs
+      id: terraform-outputs
+      run: |
+        cd infra
+        echo "container_registry_name=$(terraform output -raw container_registry_name)" >> $GITHUB_OUTPUT
+        echo "app_service_name=$(terraform output -raw app_service_name)" >> $GITHUB_OUTPUT
+        echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
+
+    # Build and push Docker image using the deploy script (only on main branch push)
+    - name: Build and Push Docker Image to Dev
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: ./scripts/deploy-docker-app.sh build-push ./app
+
+    # Restart App Service to pull the new image (only on main branch push)
+    - name: Restart Dev App Service
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        az webapp restart --name ${{ steps.terraform-outputs.outputs.app_service_name }} --resource-group ${{ steps.terraform-outputs.outputs.resource_group_name }}
+
+    # Show deployment summary using the deploy script
+    - name: Show Deployment Summary
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: ./scripts/deploy-docker-app.sh outputs

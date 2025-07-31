@@ -1,0 +1,11 @@
+# Backend configuration for dev environment
+# Usage: terraform init -backend-config=backend-dev.tfbackend
+
+# Replace these values with your actual Azure Storage account details
+resource_group_name  = "terraform-state-rg"
+storage_account_name = "terraformstated3938c"  # Replace XXXXX with unique suffix
+container_name       = "tfstate"
+key                  = "dev/terraform.tfstate"
+
+# Use Azure AD authentication (current logged in user or service principal)
+use_azuread_auth = true

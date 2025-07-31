@@ -1,0 +1,42 @@
+# General Configuration - Azure Government
+location          = "USGov Virginia"
+environment       = "dev"
+project_name      = "demo-app"
+azure_environment = "usgovernment"
+
+# Resource Group Configuration
+resource_group_name = "rg-demo-app-gov-dev"
+
+# Container Registry Configuration (must be globally unique)
+# Note: Azure Government ACR uses .azurecr.us domain
+container_registry_name = "acrdemoappgov001"
+container_registry_sku  = "Basic"
+
+# App Service Plan Configuration
+app_service_plan_name = "asp-demo-app-gov-dev"
+app_service_plan_sku  = "B1"
+
+# App Service Configuration (must be globally unique)
+# Note: Azure Government App Services use .azurewebsites.us domain
+app_service_name      = "app-demo-gov-demo-001"
+app_service_always_on = true
+health_check_path     = "/"
+
+# Docker Configuration
+docker_image_name = "my-app"
+docker_image_tag  = "latest"
+websites_port     = "80"
+
+# Additional App Settings (optional)
+additional_app_settings = {
+  "NODE_ENV" = "production"
+  "PORT"     = "80"
+  # Add any other environment variables your app needs
+}
+
+# Managed Identity Configuration
+# Set to true to use managed identity in addition to admin credentials
+enable_managed_identity_acr_access = true
+
+# Custom Domain Configuration (optional)
+# custom_domain = "your-domain.com"

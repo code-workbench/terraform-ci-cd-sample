@@ -77,9 +77,14 @@ check_azure_login() {
 init_terraform() {
     print_status "Initializing Terraform..."
     
+    # Get the script directory and project root
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+    INFRA_DIR="$PROJECT_ROOT/infra"
+    
     # Change to the infra directory where Terraform files are located
-    cd "$(dirname "$0")/../infra" || {
-        print_error "Cannot change to Terraform directory"
+    cd "$INFRA_DIR" || {
+        print_error "Cannot change to Terraform directory: $INFRA_DIR"
         exit 1
     }
     
@@ -99,8 +104,8 @@ plan_terraform() {
     print_status "Planning Terraform deployment..."
     
     # Ensure we're in the infra directory where Terraform files are located
-    cd "$(dirname "$0")/../infra" || {
-        print_error "Cannot change to Terraform directory"
+    cd "$INFRA_DIR" || {
+        print_error "Cannot change to Terraform directory: $INFRA_DIR"
         exit 1
     }
     
@@ -120,8 +125,8 @@ get_outputs() {
     print_status "Getting deployment outputs..."
     
     # Ensure we're in the infra directory where Terraform files are located
-    cd "$(dirname "$0")/../infra" || {
-        print_error "Cannot change to Terraform directory"
+    cd "$INFRA_DIR" || {
+        print_error "Cannot change to Terraform directory: $INFRA_DIR"
         exit 1
     }
     
@@ -150,6 +155,12 @@ build_and_push() {
     
     local dockerfile_dir="$1"
     
+    # Resolve absolute path to dockerfile directory before changing directories
+    dockerfile_dir="$(cd "$dockerfile_dir" && pwd)" || {
+        print_error "Cannot access dockerfile directory: $1"
+        exit 1
+    }
+    
     if [ ! -f "$dockerfile_dir/Dockerfile" ]; then
         print_error "Dockerfile not found in $dockerfile_dir"
         exit 1
@@ -157,9 +168,14 @@ build_and_push() {
     
     print_status "Building and pushing Docker image..."
     
+    # Get the script directory and project root
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+    INFRA_DIR="$PROJECT_ROOT/infra"
+    
     # Ensure we're in the infra directory where Terraform files are located
-    cd "$(dirname "$0")/../infra" || {
-        print_error "Cannot change to Terraform directory"
+    cd "$INFRA_DIR" || {
+        print_error "Cannot change to Terraform directory: $INFRA_DIR"
         exit 1
     }
     
@@ -228,9 +244,14 @@ case "${1:-help}" in
         print_warning "This will destroy all infrastructure. Are you sure? (y/N)"
         read -r response
         if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+            # Get the script directory and project root
+            SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+            PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+            INFRA_DIR="$PROJECT_ROOT/infra"
+            
             # Ensure we're in the infra directory where Terraform files are located
-            cd "$(dirname "$0")/../infra" || {
-                print_error "Cannot change to Terraform directory"
+            cd "$INFRA_DIR" || {
+                print_error "Cannot change to Terraform directory: $INFRA_DIR"
                 exit 1
             }
             terraform destroy

@@ -136,7 +136,7 @@ variable "additional_app_settings" {
 variable "enable_managed_identity_acr_access" {
   description = "Enable managed identity access to ACR (disable if using admin credentials)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # Custom Domain Configuration

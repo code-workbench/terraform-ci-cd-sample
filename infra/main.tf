@@ -31,7 +31,7 @@ resource "azurerm_container_registry" "main" {
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = var.container_registry_sku
-  admin_enabled       = true
+  admin_enabled       = false  # Changed from true to false
 
   tags = {
     Environment = var.environment
@@ -65,7 +65,7 @@ resource "azurerm_linux_web_app" "main" {
     health_check_path = var.health_check_path
 
     application_stack {
-      docker_image_name   = "${azurerm_container_registry.main.login_server}/${var.docker_image_name}:${var.docker_image_tag}"
+      docker_image_name   = "${var.docker_image_name}:${var.docker_image_tag}"
       docker_registry_url = "https://${azurerm_container_registry.main.login_server}"
     }
   }
@@ -73,10 +73,10 @@ resource "azurerm_linux_web_app" "main" {
   app_settings = merge(
     {
       "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.main.login_server}"
-      "DOCKER_REGISTRY_SERVER_USERNAME"     = azurerm_container_registry.main.admin_username
-      "DOCKER_REGISTRY_SERVER_PASSWORD"     = azurerm_container_registry.main.admin_password
+      # Removed admin username and password
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
       "WEBSITES_PORT"                       = var.websites_port
+      "DOCKER_ENABLE_CI"                    = "true"
     },
     var.additional_app_settings
   )
@@ -93,12 +93,13 @@ resource "azurerm_linux_web_app" "main" {
   depends_on = [azurerm_container_registry.main]
 }
 
-# Optional: Grant App Service access to Container Registry using managed identity
+# Grant App Service access to Container Registry using managed identity
 resource "azurerm_role_assignment" "acr_pull" {
-  count                = var.enable_managed_identity_acr_access ? 1 : 0
   scope                = azurerm_container_registry.main.id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_linux_web_app.main.identity[0].principal_id
+
+  depends_on = [azurerm_linux_web_app.main]
 }
 
 # Optional: Custom domain (if provided)

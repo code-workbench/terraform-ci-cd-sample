@@ -139,7 +139,8 @@ You will get an output similar to this:
   "clientId": "your-service-principal-client-id",
   "clientSecret": "your-service-principal-client-secret",
   "subscriptionId": "your-azure-subscription-id",
-  "tenantId": "your-azure-tenant-id"
+  "tenantId": "your-azure-tenant-id",
+  "auth-type":"SERVICE_PRINCIPAL"
 }
 ```
 

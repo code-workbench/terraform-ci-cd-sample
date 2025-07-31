@@ -84,6 +84,14 @@ HTML_TEMPLATE = """
             border-radius: 20px;
             font-weight: bold;
         }
+        .demo-value {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #FF6B35;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +102,7 @@ HTML_TEMPLATE = """
             <p>Status: <span class="status">Running</span></p>
             <p>Timestamp: {{ timestamp }}</p>
             <p>Environment: {{ environment }}</p>
+            <p>Demo Value: <span class="demo-value">{{ demo_value }}</span></p>
         </div>
         
         <div class="info-card">
@@ -114,6 +123,7 @@ HTML_TEMPLATE = """
                 <li>Azure Container Registry integration</li>
                 <li>Health check endpoints</li>
                 <li>Environment configuration</li>
+                <li>Environment variable display (DEMO_VALUE)</li>
             </ul>
         </div>
         
@@ -130,13 +140,15 @@ HTML_TEMPLATE = """
 @app.route('/')
 def home():
     """Main page with system information"""
+    demo_value = os.environ.get('DEMO_VALUE', 'Not Set')
     return render_template_string(HTML_TEMPLATE,
         timestamp=datetime.now().isoformat(),
         environment=os.environ.get('FLASK_ENV', 'production'),
         hostname=socket.gethostname(),
         platform=f"{platform.system()} {platform.release()}",
         python_version=platform.python_version(),
-        architecture=platform.machine()
+        architecture=platform.machine(),
+        demo_value=demo_value
     )
 
 @app.route('/health')
@@ -160,7 +172,8 @@ def api_info():
         'python_implementation': platform.python_implementation(),
         'uptime': time.time(),
         'environment': os.environ.get('FLASK_ENV', 'production'),
-        'port': PORT
+        'port': PORT,
+        'demo_value': os.environ.get('DEMO_VALUE', 'Not Set')
     })
 
 @app.route('/api/status')
@@ -172,7 +185,8 @@ def api_status():
         'environment': os.environ.get('FLASK_ENV', 'production'),
         'version': '1.0.0',
         'framework': 'Flask',
-        'language': 'Python'
+        'language': 'Python',
+        'demo_value': os.environ.get('DEMO_VALUE', 'Not Set')
     })
 
 @app.errorhandler(404)
@@ -197,6 +211,7 @@ if __name__ == '__main__':
     print(f"Starting Python Demo App on port {PORT}")
     print(f"Environment: {os.environ.get('FLASK_ENV', 'production')}")
     print(f"Platform: {platform.system()} {platform.release()}")
+    print(f"Demo Value: {os.environ.get('DEMO_VALUE', 'Not Set')}")
     
     # Run the Flask app
     app.run(

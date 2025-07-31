@@ -61,14 +61,16 @@ resource "azurerm_service_plan" "main" {
 
 # Create App Service (Web App)
 resource "azurerm_linux_web_app" "main" {
-  name                = var.app_service_name
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_service_plan.main.location
-  service_plan_id     = azurerm_service_plan.main.id
-
+  name                                           = var.app_service_name
+  resource_group_name                            = azurerm_resource_group.main.name
+  location                                       = azurerm_service_plan.main.location
+  service_plan_id                                = azurerm_service_plan.main.id
+  webdeploy_publish_basic_authentication_enabled = false
+  ftp_publish_basic_authentication_enabled       = true
   site_config {
-    always_on         = var.app_service_always_on
-    health_check_path = var.health_check_path
+    always_on                               = var.app_service_always_on
+    health_check_path                       = var.health_check_path
+    container_registry_use_managed_identity = true
 
     application_stack {
       docker_image_name   = "${var.docker_image_name}:${var.docker_image_tag}"
@@ -79,11 +81,10 @@ resource "azurerm_linux_web_app" "main" {
   app_settings = merge(
     {
       "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.main.login_server}"
-      "DOCKER_REGISTRY_SERVER_USERNAME"     = ""
-      "DOCKER_REGISTRY_SERVER_PASSWORD"     = ""
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
       "WEBSITES_PORT"                       = var.websites_port
       "DOCKER_ENABLE_CI"                    = "true"
+      "DEMO_VALUE"                          = "Test value"
     },
     var.additional_app_settings
   )
@@ -97,7 +98,7 @@ resource "azurerm_linux_web_app" "main" {
     Project     = var.project_name
   }
 
-  depends_on = [azurerm_container_registry.main, azurerm_role_assignment.acr_pull]
+  depends_on = [azurerm_container_registry.main]
 }
 
 # Grant App Service access to Container Registry using managed identity

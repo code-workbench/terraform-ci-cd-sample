@@ -75,7 +75,8 @@ check_azure_login() {
 
 # Function to initialize Terraform
 init_terraform() {
-    print_status "Initializing Terraform..."
+    local environment="$1"
+    print_status "Initializing Terraform for $environment environment..."
     
     # Get the script directory and project root
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -88,20 +89,126 @@ init_terraform() {
         exit 1
     }
     
-    if [ ! -f "terraform.tfvars" ]; then
-        print_warning "terraform.tfvars not found. Creating from example..."
-        cp terraform.tfvars.example terraform.tfvars
-        print_warning "Please edit terraform.tfvars with your specific values before continuing."
+    # Check if backend config file exists
+    local backend_config="backend-${environment}.tfbackend"
+    if [ ! -f "$backend_config" ]; then
+        print_error "Backend configuration file not found: $backend_config"
+        print_error "Available environments: local, dev, prod"
         exit 1
     fi
     
-    terraform init
-    print_status "Terraform initialized ✓"
+    # Check if environment variable file exists
+    local var_file="terraform-${environment}.tfvars"
+    if [ ! -f "$var_file" ]; then
+        print_error "Environment variables file not found: $var_file"
+        print_error "Available environments: local, dev, prod"
+        exit 1
+    fi
+    
+    # Clean up any existing backend configuration
+    rm -rf .terraform/
+    
+    # Initialize with environment-specific backend
+    terraform init -backend-config="$backend_config"
+    local current_workspace=$(terraform workspace show)
+    print_status "Current workspace: $current_workspace"
+}
+
+# Function to manage local workspace for feature development
+manage_local_workspace() {
+    print_status "Managing local workspace..."
+    
+    # List existing workspaces
+    local workspaces=$(terraform workspace list | grep -v "default" | sed 's/[* ]//g' | grep -v "^$")
+    
+    if [ -n "$workspaces" ]; then
+        echo "Existing workspaces:"
+        echo "$workspaces"
+        echo
+    fi
+    
+    # Get current branch name if in git repo
+    local current_branch=""
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        current_branch=$(git branch --show-current 2>/dev/null || echo "")
+    fi
+    
+    # Suggest workspace name based on current branch
+    local suggested_workspace=""
+    if [ -n "$current_branch" ] && [ "$current_branch" != "main" ] && [ "$current_branch" != "master" ]; then
+        suggested_workspace="$current_branch"
+    fi
+    
+    echo "Local environment workspace options:"
+    echo "1) Use default workspace"
+    if [ -n "$suggested_workspace" ]; then
+        echo "2) Create/select workspace: $suggested_workspace (based on current git branch)"
+        echo "3) Create/select a custom workspace"
+    else
+        echo "2) Create/select a custom workspace"
+    fi
+    echo
+    
+    read -p "Choose an option (1-3): " choice
+    
+    case $choice in
+        1)
+            terraform workspace select default
+            print_status "Using default workspace ✓"
+            ;;
+        2)
+            if [ -n "$suggested_workspace" ]; then
+                workspace_name="$suggested_workspace"
+            else
+                read -p "Enter workspace name: " workspace_name
+            fi
+            
+            if [ -n "$workspace_name" ]; then
+                # Try to select existing workspace, create if it doesn't exist
+                if terraform workspace select "$workspace_name" 2>/dev/null; then
+                    print_status "Selected existing workspace: $workspace_name ✓"
+                else
+                    terraform workspace new "$workspace_name"
+                    print_status "Created and selected new workspace: $workspace_name ✓"
+                fi
+            else
+                print_warning "No workspace name provided, using default"
+                terraform workspace select default
+            fi
+            ;;
+        3)
+            if [ -n "$suggested_workspace" ]; then
+                read -p "Enter workspace name: " workspace_name
+            else
+                read -p "Enter workspace name: " workspace_name
+            fi
+            
+            if [ -n "$workspace_name" ]; then
+                if terraform workspace select "$workspace_name" 2>/dev/null; then
+                    print_status "Selected existing workspace: $workspace_name ✓"
+                else
+                    terraform workspace new "$workspace_name"
+                    print_status "Created and selected new workspace: $workspace_name ✓"
+                fi
+            else
+                print_warning "No workspace name provided, using default"
+                terraform workspace select default
+            fi
+            ;;
+        *)
+            print_warning "Invalid choice, using default workspace"
+            terraform workspace select default
+            ;;
+    esac
+    
+    local current_workspace=$(terraform workspace show)
+    print_status "Current workspace: $current_workspace"
 }
 
 # Function to plan Terraform deployment
 plan_terraform() {
-    print_status "Planning Terraform deployment..."
+    local environment="$1"
+    print_status "Planning Terraform deployment for $environment environment..."
     
     # Ensure we're in the infra directory where Terraform files are located
     cd "$INFRA_DIR" || {
@@ -109,7 +216,8 @@ plan_terraform() {
         exit 1
     }
     
-    terraform plan -out=tfplan
+    local var_file="terraform-${environment}.tfvars"
+    terraform plan -var-file="$var_file" -out=tfplan
     print_status "Terraform plan completed ✓"
 }
 
@@ -205,30 +313,52 @@ show_help() {
     echo "Azure App Service Docker Deployment Script"
     echo
     echo "Usage:"
-    echo "  $0 [command] [options]"
+    echo "  $0 [command] [environment] [options]"
     echo
     echo "Commands:"
-    echo "  deploy              Deploy infrastructure using Terraform"
-    echo "  build-push <dir>    Build and push Docker image from directory"
-    echo "  outputs             Show deployment outputs"
-    echo "  destroy             Destroy all infrastructure"
-    echo "  help                Show this help message"
+    echo "  deploy <env>         Deploy infrastructure using Terraform"
+    echo "  build-push <dir>     Build and push Docker image from directory"
+    echo "  outputs              Show deployment outputs"
+    echo "  destroy <env>        Destroy all infrastructure"
+    echo "  help                 Show this help message"
+    echo
+    echo "Environments:"
+    echo "  local               Local development environment"
+    echo "  dev                 Development environment"
+    echo "  prod                Production environment"
     echo
     echo "Examples:"
-    echo "  $0 deploy                    # Deploy infrastructure"
-    echo "  $0 build-push ./app         # Build and push from app directory"
-    echo "  $0 build-push /path/to/app  # Build and push from specific directory"
-    echo "  $0 outputs                  # Show deployment information"
+    echo "  $0 deploy local                # Deploy to local environment"
+    echo "  $0 deploy dev                  # Deploy to dev environment"
+    echo "  $0 deploy prod                 # Deploy to production environment"
+    echo "  $0 build-push ./app           # Build and push from app directory"
+    echo "  $0 build-push /path/to/app    # Build and push from specific directory"
+    echo "  $0 outputs                    # Show deployment information"
+    echo "  $0 destroy dev                # Destroy dev environment"
+    echo
+    echo "Note: For local development, you can create feature-specific workspaces:"
+    echo "  terraform workspace new feature-branch-name"
+    echo "  terraform workspace select feature-branch-name"
     echo
 }
 
 # Main script logic
 case "${1:-help}" in
     "deploy")
+        if [ -z "$2" ]; then
+            print_error "Please specify an environment: local, dev, or prod"
+            echo "Usage: $0 deploy <environment>"
+            exit 1
+        fi
+        environment="$2"
+        if [[ ! "$environment" =~ ^(local|dev|prod)$ ]]; then
+            print_error "Invalid environment. Valid options: local, dev, prod"
+            exit 1
+        fi
         check_prerequisites
         check_azure_login
-        init_terraform
-        plan_terraform
+        init_terraform "$environment"
+        plan_terraform "$environment"
         apply_terraform
         get_outputs
         ;;
@@ -241,9 +371,22 @@ case "${1:-help}" in
         get_outputs
         ;;
     "destroy")
-        print_warning "This will destroy all infrastructure. Are you sure? (y/N)"
+        if [ -z "$2" ]; then
+            print_error "Please specify an environment: local, dev, or prod"
+            echo "Usage: $0 destroy <environment>"
+            exit 1
+        fi
+        environment="$2"
+        if [[ ! "$environment" =~ ^(local|dev|prod)$ ]]; then
+            print_error "Invalid environment. Valid options: local, dev, prod"
+            exit 1
+        fi
+        print_warning "This will destroy all infrastructure in the $environment environment. Are you sure? (y/N)"
         read -r response
         if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+            check_prerequisites
+            check_azure_login
+            init_terraform "$environment"
             # Get the script directory and project root
             SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
             PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -254,8 +397,9 @@ case "${1:-help}" in
                 print_error "Cannot change to Terraform directory: $INFRA_DIR"
                 exit 1
             }
-            terraform destroy
-            print_status "Infrastructure destroyed"
+            local var_file="terraform-${environment}.tfvars"
+            terraform destroy -var-file="$var_file"
+            print_status "Infrastructure destroyed for $environment environment"
         else
             print_status "Destroy cancelled"
         fi

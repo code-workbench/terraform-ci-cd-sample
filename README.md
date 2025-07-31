@@ -120,6 +120,31 @@ This configuration supports the following Azure Government regions:
 5. **Access Your Application**
    Your application will be available at the URL provided in the Terraform output.
 
+## Setting up CI/CD:
+
+To setup CI/CD using the Github Worklow, you will need to take the following actions:
+
+1. Create a service principal to assign to the github runner:
+
+```
+# Create the service principal
+SUBSCRIPTION_ID="<The Guid ID of your azure subscription>"
+az ad sp create-for-rbac --name "demo-terraform-ci-cd-sp" --role contributor --scopes /subscriptions/$SUBSCRIPTION_ID
+```
+
+You will get an output similar to this:
+
+```
+{
+  "clientId": "your-service-principal-client-id",
+  "clientSecret": "your-service-principal-client-secret",
+  "subscriptionId": "your-azure-subscription-id",
+  "tenantId": "your-azure-tenant-id"
+}
+```
+
+Populate this into a GITHUB Secret named "AZURE_CREDENTIALS".
+
 ## Configuration Variables
 
 ### Required Variables

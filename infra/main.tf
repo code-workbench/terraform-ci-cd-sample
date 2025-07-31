@@ -6,6 +6,12 @@ terraform {
       version = "~>3.0"
     }
   }
+
+  backend "azurerm" {
+    environment = "usgovernment"
+    # Configuration will be provided via -backend-config flags or backend config files
+    # This allows different environments to use different state files
+  }
 }
 
 # Configure the Microsoft Azure Provider for Azure Government
@@ -31,7 +37,7 @@ resource "azurerm_container_registry" "main" {
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   sku                 = var.container_registry_sku
-  admin_enabled       = false  # Changed from true to false
+  admin_enabled       = false # Changed from true to false
 
   tags = {
     Environment = var.environment
@@ -73,7 +79,8 @@ resource "azurerm_linux_web_app" "main" {
   app_settings = merge(
     {
       "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.main.login_server}"
-      # Removed admin username and password
+      "DOCKER_REGISTRY_SERVER_USERNAME"     = ""
+      "DOCKER_REGISTRY_SERVER_PASSWORD"     = ""
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
       "WEBSITES_PORT"                       = var.websites_port
       "DOCKER_ENABLE_CI"                    = "true"
@@ -90,7 +97,7 @@ resource "azurerm_linux_web_app" "main" {
     Project     = var.project_name
   }
 
-  depends_on = [azurerm_container_registry.main]
+  depends_on = [azurerm_container_registry.main, azurerm_role_assignment.acr_pull]
 }
 
 # Grant App Service access to Container Registry using managed identity
@@ -98,14 +105,4 @@ resource "azurerm_role_assignment" "acr_pull" {
   scope                = azurerm_container_registry.main.id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_linux_web_app.main.identity[0].principal_id
-
-  depends_on = [azurerm_linux_web_app.main]
-}
-
-# Optional: Custom domain (if provided)
-resource "azurerm_app_service_custom_hostname_binding" "main" {
-  count               = var.custom_domain != null ? 1 : 0
-  hostname            = var.custom_domain
-  app_service_name    = azurerm_linux_web_app.main.name
-  resource_group_name = azurerm_resource_group.main.name
 }

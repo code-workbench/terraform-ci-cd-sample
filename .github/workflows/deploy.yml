@@ -59,21 +59,37 @@ jobs:
     - name: Make deploy script executable
       run: chmod +x ./scripts/deploy-docker-app.sh
 
-    # Create terraform.tfvars from secrets for dev environment
+    # Create terraform.tfvars for dev environment
     - name: Create terraform.tfvars for dev environment
       run: |
         cd infra
         cat > terraform.tfvars << EOF
-        container_registry_name = "${{ secrets.DEV_CONTAINER_REGISTRY_NAME }}"
-        app_service_name = "${{ secrets.DEV_APP_SERVICE_NAME }}"
-        resource_group_name = "${{ secrets.DEV_RESOURCE_GROUP_NAME }}"
         location = "${{ secrets.AZURE_LOCATION }}"
         environment = "dev"
         EOF
 
+    # Configure Terraform backend for remote state
+    - name: Configure Terraform Backend
+      run: |
+        cd infra
+        terraform init \
+          -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER_NAME }}" \
+          -backend-config="key=dev/terraform.tfstate"
+
     # Deploy infrastructure using the deploy script
     - name: Deploy Infrastructure to Dev
-      run: ./scripts/deploy-docker-app.sh deploy
+      run: ./scripts/deploy-docker-app.sh deploy dev
+
+    # Get Terraform outputs for subsequent steps
+    - name: Get Terraform Outputs
+      id: terraform-outputs
+      run: |
+        cd infra
+        echo "container_registry_name=$(terraform output -raw container_registry_name)" >> $GITHUB_OUTPUT
+        echo "app_service_name=$(terraform output -raw app_service_name)" >> $GITHUB_OUTPUT
+        echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
 
     # Build and push Docker image using the deploy script (only on main branch push)
     - name: Build and Push Docker Image to Dev
@@ -84,7 +100,7 @@ jobs:
     - name: Restart Dev App Service
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
-        az webapp restart --name ${{ secrets.DEV_APP_SERVICE_NAME }} --resource-group ${{ secrets.DEV_RESOURCE_GROUP_NAME }}
+        az webapp restart --name ${{ steps.terraform-outputs.outputs.app_service_name }} --resource-group ${{ steps.terraform-outputs.outputs.resource_group_name }}
 
     # Show deployment summary using the deploy script
     - name: Show Deployment Summary
